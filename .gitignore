@@ -28,9 +28,16 @@ yarn-error.log*
 # local env files
 .env*.local
 
+# mobile app
+/mobile/node_modules
+/mobile/.expo
+/mobile/.expo-shared
+
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/src/generated/prisma

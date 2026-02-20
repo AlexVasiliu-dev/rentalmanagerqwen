@@ -1,0 +1,382 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User roles enum
+enum Role {
+  ADMIN     // Property owner - full access
+  MANAGER   // Reading access + can accept/dismiss renters
+  RENTER    // Limited access to their own data
+}
+
+// Subscription status
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  CANCELLED
+  EXPIRED
+  TRIAL
+}
+
+// Meter reading types
+enum ReadingType {
+  INITIAL   // When renter moves in
+  MONTHLY   // Regular monthly reading
+  FINAL     // When renter moves out
+}
+
+// Meter types
+enum MeterType {
+  ELECTRICITY
+  WATER
+  GAS
+}
+
+// User model
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String
+  role          Role      @default(RENTER)
+  approved      Boolean   @default(false)  // Must be approved by admin
+  active        Boolean   @default(true)   // Can be disabled when moving out
+  
+  // Owner-specific fields
+  ownerSlug     String?   @unique  // Permanent link slug for owner (e.g., Property_mngmt.com/owner/slug)
+  stripeCustomerId String? @unique // Stripe customer ID
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  rentedProperties   Lease[]       @relation("Renter")
+  managedProperties  Property[]    @relation("Manager")
+  meterReadings      MeterReading[]
+  bills              Bill[]
+  subscription       Subscription?
+  payments           Payment[]
+  sentMessages       ContactMessage[] @relation("ContactMessageSender")
+  receivedMessages   ContactMessage[] @relation("ContactMessageRecipient")
+
+  @@index([email])
+  @@index([role])
+  @@index([ownerSlug])
+}
+
+// Property model
+model Property {
+  id            String    @id @default(cuid())
+  address       String
+  city          String
+  country       String    @default("Romania")
+  postalCode    String?
+  type          String    // Apartment, House, Studio, etc.
+  sqm           Float     // Square meters
+  rooms         Int?
+  floor         Int?
+  description   String?
+  
+  // Pricing
+  monthlyRent   Float
+  deposit       Float?
+  utilitiesIncluded Boolean @default(false)
+  
+  // Status
+  available     Boolean   @default(true)
+  subscriptionRequired Boolean @default(true)  // Requires active subscription to manage
+  isSubscriptionActive Boolean @default(false) // Is currently covered by subscription
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  images         PropertyImage[]
+  managerId      String?
+  manager        User?     @relation("Manager", fields: [managerId], references: [id])
+  leases         Lease[]
+  meters         Meter[]
+  contactMessages ContactMessage[]
+
+  @@index([available])
+  @@index([managerId])
+}
+
+// Property images
+model PropertyImage {
+  id          String   @id @default(cuid())
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  url         String
+  caption     String?
+  isPrimary   Boolean  @default(false)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  
+  @@index([propertyId])
+}
+
+// Lease/Rental agreement
+model Lease {
+  id            String    @id @default(cuid())
+  propertyId    String
+  property      Property  @relation(fields: [propertyId], references: [id])
+  renterId      String
+  renter        User      @relation("Renter", fields: [renterId], references: [id])
+  
+  // Lease period
+  startDate     DateTime
+  endDate       DateTime?
+  isActive      Boolean   @default(true)
+  
+  // Financial
+  monthlyRent   Float     // Rent at the time of lease
+  deposit       Float?
+  depositReturned Boolean @default(false)
+  
+  // Approval
+  approvedBy    String?   // Admin who approved
+  approvedAt    DateTime?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  meterReadings MeterReading[]
+  bills         Bill[]
+  
+  @@unique([propertyId, renterId, startDate])
+  @@index([renterId])
+  @@index([propertyId])
+  @@index([isActive])
+}
+
+// Meter installed in a property
+model Meter {
+  id          String    @id @default(cuid())
+  propertyId  String
+  property    Property  @relation(fields: [propertyId], references: [id])
+  type        MeterType
+  serialNumber String?
+  location    String?   // e.g., "Basement", "Floor 1", etc.
+  
+  // Pricing per unit (can be updated over time)
+  pricePerUnit Float    @default(0)
+  currency    String    @default("RON")
+  
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  readings    MeterReading[]
+  
+  @@unique([propertyId, type])
+  @@index([propertyId])
+  @@index([type])
+}
+
+// Meter readings
+model MeterReading {
+  id          String    @id @default(cuid())
+  meterId     String
+  meter       Meter     @relation(fields: [meterId], references: [id])
+  leaseId     String?
+  lease       Lease?    @relation(fields: [leaseId], references: [id])
+  
+  // Who submitted this (renter or OCR bot)
+  submittedBy String?
+  submittedByUser User? @relation(fields: [submittedBy], references: [id])
+  
+  readingType ReadingType
+  value       Float     // The actual meter reading
+  consumption Float?    // Calculated consumption from previous reading
+  photoUrl    String?   // Photo of the meter
+  
+  // OCR processing
+  isOCRProcessed Boolean @default(false)
+  ocrConfidence Float?
+  
+  // Period
+  readingDate DateTime  @default(now())
+  periodStart DateTime? // Start of billing period
+  periodEnd   DateTime? // End of billing period
+  
+  notes       String?
+  verified    Boolean   @default(false)  // Verified by manager
+  createdAt   DateTime  @default(now())
+  
+  @@index([meterId])
+  @@index([leaseId])
+  @@index([readingDate])
+}
+
+// Bills/Invoices
+model Bill {
+  id          String    @id @default(cuid())
+  leaseId     String?
+  lease       Lease?    @relation(fields: [leaseId], references: [id])
+  userId      String?   // For direct bills to users
+  user        User?     @relation(fields: [userId], references: [id])
+  
+  // Bill details
+  type        String    // "utilities", "rent", "maintenance", etc.
+  description String?
+  
+  // Amounts
+  amount      Float
+  currency    String    @default("RON")
+  paid        Boolean   @default(false)
+  paidAt      DateTime?
+  
+  // Period
+  periodStart DateTime
+  periodEnd   DateTime
+  
+  // Meter readings breakdown (stored as JSON for flexibility)
+  meterReadingsBreakdown Json? // [{ meterType, consumption, pricePerUnit, total }]
+  
+  dueDate   DateTime
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  
+  @@index([leaseId])
+  @@index([userId])
+  @@index([paid])
+  @@index([dueDate])
+}
+
+// Expense tracking (for owner/manager)
+model Expense {
+  id          String    @id @default(cuid())
+  propertyId  String?
+  category    String    // "maintenance", "repairs", "taxes", "insurance", etc.
+  description String
+  amount      Float
+  currency    String    @default("RON")
+  date        DateTime
+  receiptUrl  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@index([propertyId])
+  @@index([category])
+  @@index([date])
+}
+
+// Settings for utility prices (can be updated by admin)
+model UtilityPrice {
+  id        String   @id @default(cuid())
+  meterType MeterType @unique
+  pricePerUnit Float
+  currency  String   @default("RON")
+  effectiveFrom DateTime @default(now())
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([meterType])
+  @@index([active])
+}
+
+// Audit log for tracking changes
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String   // "CREATE", "UPDATE", "DELETE", "APPROVE", etc.
+  entity    String   // "Property", "User", "MeterReading", etc.
+  entityId  String?
+  details   Json?
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([entity])
+  @@index([createdAt])
+}
+
+// Subscription model for property management pricing
+model Subscription {
+  id                String             @id @default(cuid())
+  userId            String             @unique
+  user              User               @relation(fields: [userId], references: [id])
+  
+  // Subscription details
+  status            SubscriptionStatus @default(INACTIVE)
+  stripeSubscriptionId String?         @unique // Stripe subscription ID
+  
+  // Pricing: 50 EUR per year per property
+  pricePerProperty  Int              @default(5000) // In cents (50 EUR = 5000 cents)
+  currency          String             @default("EUR")
+  billingPeriod     String             @default("yearly")
+  
+  // Buy one get one free: paidProperties = 1, coveredProperties = 2
+  paidProperties    Int                @default(0) // Properties paid for
+  coveredProperties Int                @default(0) // Total properties covered (paid * 2)
+  
+  // Period
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  trialEnd           DateTime?
+  
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  @@index([userId])
+  @@index([status])
+}
+
+// Payment/Invoice model
+model Payment {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id])
+  
+  // Payment details
+  stripePaymentId   String?  @unique // Stripe payment/intent ID
+  amount            Int      // In cents
+  currency          String   @default("EUR")
+  status            String   @default("pending") // pending, succeeded, failed, refunded
+  
+  // What was paid for
+  propertiesCount   Int      // Number of properties paid for in this payment
+  promotionalCredits Int     @default(0) // Free properties from BOGO deal
+  
+  // Period covered
+  periodStart       DateTime
+  periodEnd         DateTime
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Contact message model for tenant-owner communication
+model ContactMessage {
+  id          String   @id @default(cuid())
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id])
+  senderId    String
+  sender      User     @relation(fields: [senderId], references: [id], onDelete: Cascade, name: "ContactMessageSender")
+  recipientId String
+  recipient   User     @relation(fields: [recipientId], references: [id], onDelete: Cascade, name: "ContactMessageRecipient")
+  subject     String
+  message     String
+  status      String   @default("PENDING") // PENDING, READ, REPLIED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([propertyId])
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([status])
+}
