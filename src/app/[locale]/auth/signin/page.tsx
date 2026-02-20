@@ -2,24 +2,26 @@
 
 import { useState } from "react"
 import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
+import { useRouter, usePathname } from "next/navigation"
 import { useTranslations } from 'next-intl';
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Home } from "lucide-react"
+import { LocaleLink } from '@/components/LocaleLink'
 
 export default function SignInPage() {
   const t = useTranslations('auth');
   const router = useRouter()
+  const pathname = usePathname()
+  const locale = pathname?.split('/')[1] || 'en'
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault
     setError("")
     setLoading(true)
 
@@ -33,7 +35,7 @@ export default function SignInPage() {
       if (result?.error) {
         setError(result.error)
       } else {
-        router.push("/dashboard")
+        router.push(`/${locale}/dashboard`)
         router.refresh()
       }
     } catch {
@@ -93,9 +95,9 @@ export default function SignInPage() {
             </Button>
           </form>
           <div className="mt-4 text-center text-sm">
-            <Link href="/auth/register" className="text-blue-600 hover:underline">
+            <LocaleLink href="/auth/register" className="text-blue-600 hover:underline">
               {t('noAccount')} {t('register')}
-            </Link>
+            </LocaleLink>
           </div>
         </CardContent>
       </Card>

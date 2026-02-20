@@ -3,13 +3,13 @@
 import { useSession } from "next-auth/react"
 import { redirect } from "next/navigation"
 import { signOut } from "next-auth/react"
-import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTranslations } from 'next-intl';
 import { Button } from "@/components/ui/button"
 import { Home, Users, FileText, DollarSign, LogOut, Menu, LayoutDashboard, CreditCard } from "lucide-react"
 import { useState } from "react"
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { LocaleLink } from '@/components/LocaleLink';
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -23,6 +23,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+  // Get locale at the top
+  const locale = pathname?.split('/')[1] || 'en'
+
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -35,7 +38,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   if (status === "unauthenticated") {
-    redirect("/auth/signin")
+    redirect(`/${locale}/auth/signin`)
   }
 
   const navigation = [
@@ -53,6 +56,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     (item) => !item.roles || (session?.user.role && item.roles.includes(session.user.role))
   )
 
+  // Add locale prefix to all navigation links
+  const localizedNavigation = filteredNavigation.map(item => ({
+    ...item,
+    href: `/${locale}${item.href}`
+  }))
+
+  const handleSignOut = () => {
+    signOut({ callbackUrl: `/${locale}` })
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Navigation */}
@@ -66,10 +79,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               >
                 <Menu className="h-5 w-5" />
               </button>
-              <Link href="/dashboard" className="flex items-center gap-2">
+              <LocaleLink href="/dashboard" className="flex items-center gap-2">
                 <Home className="h-6 w-6 text-blue-600" />
                 <span className="font-bold text-lg hidden sm:inline">RentManager</span>
-              </Link>
+              </LocaleLink>
             </div>
 
             <div className="flex items-center gap-4">
@@ -80,7 +93,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   {session?.user.role}
                 </span>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => signOut({ callbackUrl: "/" })}>
+              <Button variant="ghost" size="sm" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">{tAuth('signOut')}</span>
               </Button>
@@ -99,10 +112,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           `}>
             <div className="h-full overflow-y-auto py-6 px-4">
               <nav className="space-y-1">
-                {filteredNavigation.map((item) => {
+                {localizedNavigation.map((item) => {
                   const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
                   return (
-                    <Link
+                    <LocaleLink
                       key={item.name}
                       href={item.href}
                       onClick={() => setMobileMenuOpen(false)}
@@ -116,7 +129,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     >
                       <item.icon className="h-5 w-5" />
                       {item.name}
-                    </Link>
+                    </LocaleLink>
                   )
                 })}
               </nav>

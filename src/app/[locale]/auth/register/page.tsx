@@ -2,14 +2,18 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { useTranslations } from 'next-intl';
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Home } from "lucide-react"
+import { LocaleLink } from '@/components/LocaleLink'
 
 export default function RegisterPage() {
   const t = useTranslations('auth');
+  const pathname = usePathname()
+  const locale = pathname?.split('/')[1] || 'en'
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -76,9 +80,9 @@ export default function RegisterPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Link href="/auth/signin" className="block">
+            <LocaleLink href="/auth/signin" className="block">
               <Button className="w-full">{t('backToSignIn')}</Button>
-            </Link>
+            </LocaleLink>
           </CardContent>
         </Card>
       </div>
@@ -161,9 +165,9 @@ export default function RegisterPage() {
             </Button>
           </form>
           <div className="mt-4 text-center text-sm">
-            <Link href="/auth/signin" className="text-blue-600 hover:underline">
+            <LocaleLink href="/auth/signin" className="text-blue-600 hover:underline">
               {t('hasAccount')} {t('signIn')}
-            </Link>
+            </LocaleLink>
           </div>
         </CardContent>
       </Card>

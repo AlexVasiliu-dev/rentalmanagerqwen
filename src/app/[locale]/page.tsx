@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/ca
 import { Home, Users, FileText, Shield, ArrowRight } from "lucide-react"
 import { getTranslations } from 'next-intl/server';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { LocaleLink } from '@/components/LocaleLink';
 
 export default async function HomePage() {
   const t = await getTranslations('home');
@@ -13,18 +14,18 @@ export default async function HomePage() {
       {/* Header */}
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
+          <LocaleLink href="/" className="flex items-center gap-2">
             <Home className="h-6 w-6 text-blue-600" />
             <span className="text-xl font-bold text-gray-900">RentManager</span>
-          </Link>
+          </LocaleLink>
           <div className="flex items-center gap-4">
             <LanguageSwitcher />
-            <Link href="/auth/signin">
+            <LocaleLink href="/auth/signin">
               <Button variant="ghost">{t('signIn')}</Button>
-            </Link>
-            <Link href="/auth/register">
+            </LocaleLink>
+            <LocaleLink href="/auth/register">
               <Button>{t('startFreeTrial')}</Button>
-            </Link>
+            </LocaleLink>
           </div>
         </div>
       </header>
@@ -38,16 +39,16 @@ export default async function HomePage() {
           {t('heroDescription')}
         </p>
         <div className="flex justify-center gap-4">
-          <Link href="/auth/register">
+          <LocaleLink href="/auth/register">
             <Button size="lg" className="gap-2">
               {t('startFreeTrial')} <ArrowRight className="h-4 w-4" />
             </Button>
-          </Link>
-          <Link href="/auth/signin">
+          </LocaleLink>
+          <LocaleLink href="/auth/signin">
             <Button size="lg" variant="outline">
               {t('signIn')}
             </Button>
-          </Link>
+          </LocaleLink>
         </div>
       </section>
 

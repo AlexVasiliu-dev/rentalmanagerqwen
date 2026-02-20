@@ -10,14 +10,20 @@ import { Button } from "@/components/ui/button"
 import { ContactManager } from "@/components/ContactManager"
 import { ContactOwner } from "@/components/ContactOwner"
 import { getTranslations } from 'next-intl/server';
+import { headers } from 'next/headers';
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
   const t = await getTranslations('dashboard');
   const tRoles = await getTranslations('roles');
-  
+
+  // Get locale from headers
+  const headersList = headers()
+  const pathname = headersList.get('x-pathname') || ''
+  const locale = pathname.split('/')[1] || 'en'
+
   if (!session) {
-    redirect("/auth/signin")
+    redirect(`/${locale}/auth/signin`)
   }
 
   // Fetch dashboard stats based on role
@@ -229,16 +235,16 @@ export default async function DashboardPage() {
           <div className="flex flex-wrap gap-2">
             {session.user.role === "ADMIN" && (
               <>
-                <a href="/dashboard/properties?action=add" className="inline-flex">
+                <a href={`/${locale}/dashboard/properties?action=add`} className="inline-flex">
                   <Button>Add Property</Button>
                 </a>
-                <a href="/dashboard/users" className="inline-flex">
+                <a href={`/${locale}/dashboard/users`} className="inline-flex">
                   <Button variant="outline">Manage Users</Button>
                 </a>
               </>
             )}
             {session.user.role === "RENTER" && (
-              <a href="/dashboard/meter-readings?action=add" className="inline-flex">
+              <a href={`/${locale}/dashboard/meter-readings?action=add`} className="inline-flex">
                 <Button>Submit Meter Reading</Button>
               </a>
             )}
