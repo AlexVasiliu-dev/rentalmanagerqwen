@@ -40,17 +40,22 @@ model User {
   role          Role      @default(RENTER)
   approved      Boolean   @default(false)  // Must be approved by admin
   active        Boolean   @default(true)   // Can be disabled when moving out
+  
+  // Owner-specific fields
+  ownerSlug     String?   @unique  // Public profile URL slug (e.g., rentalmanager.ro/owner/john-doe)
+  
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  
+
   // Relations
   rentedProperties   Lease[]       @relation("Renter")
   managedProperties  Property[]    @relation("Manager")
   meterReadings      MeterReading[]
   bills              Bill[]
-  
+
   @@index([email])
   @@index([role])
+  @@index([ownerSlug])
 }
 
 // Property model

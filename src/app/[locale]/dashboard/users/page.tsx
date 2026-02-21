@@ -22,6 +22,15 @@ interface User {
   }
 }
 
+interface Property {
+  id: string
+  address: string
+  city: string
+  monthlyRent: number
+  deposit: number | null
+  available: boolean
+}
+
 export default function UsersPage() {
   const t = useTranslations('dashboard');
   const tCommon = useTranslations('common');
@@ -29,16 +38,35 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([])
   const [filter, setFilter] = useState<"all" | "pending" | "active">("all")
   const [showAddForm, setShowAddForm] = useState(false)
+  const [properties, setProperties] = useState<Property[]>([])
+  const [selectedProperty, setSelectedProperty] = useState<string>("")
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     name: "",
     role: "RENTER" as "RENTER",
+    startDate: "",
+    endDate: "",
+    monthlyRent: "",
+    deposit: "",
   })
 
   useEffect(() => {
     fetchUsers()
+    fetchProperties()
   }, [])
+
+  const fetchProperties = async () => {
+    try {
+      const response = await fetch("/api/properties?available=true")
+      if (response.ok) {
+        const data = await response.json()
+        setProperties(data)
+      }
+    } catch (error) {
+      console.error("Error fetching properties:", error)
+    }
+  }
 
   const fetchUsers = async () => {
     try {
@@ -88,23 +116,34 @@ export default function UsersPage() {
     e.preventDefault()
     
     try {
+      const payload: Record<string, unknown> = {
+        email: formData.email,
+        password: formData.password,
+        name: formData.name || undefined,
+        role: "RENTER",
+        approved: true,
+        active: true,
+      }
+
+      // Add lease information if property is selected
+      if (selectedProperty && formData.startDate) {
+        payload.propertyId = selectedProperty
+        payload.startDate = formData.startDate
+        if (formData.endDate) payload.endDate = formData.endDate
+        if (formData.monthlyRent) payload.monthlyRent = parseFloat(formData.monthlyRent)
+        if (formData.deposit) payload.deposit = parseFloat(formData.deposit)
+      }
+
       const response = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          name: formData.name || undefined,
-          role: "RENTER",
-          approved: true,
-          active: true,
-        }),
+        body: JSON.stringify(payload),
       })
 
       if (response.ok) {
         await fetchUsers()
         setShowAddForm(false)
-        setFormData({ email: "", password: "", name: "", role: "RENTER" })
+        resetForm()
       } else {
         const error = await response.json()
         alert(error.error || "Failed to create tenant")
@@ -112,6 +151,24 @@ export default function UsersPage() {
     } catch (error) {
       console.error("Error creating tenant:", error)
       alert("Failed to create tenant")
+    }
+  }
+
+  const resetForm = () => {
+    setShowAddForm(false)
+    setSelectedProperty("")
+    setFormData({ email: "", password: "", name: "", role: "RENTER", startDate: "", endDate: "", monthlyRent: "", deposit: "" })
+  }
+
+  const handlePropertyChange = (propertyId: string) => {
+    setSelectedProperty(propertyId)
+    const property = properties.find(p => p.id === propertyId)
+    if (property) {
+      setFormData({
+        ...formData,
+        monthlyRent: property.monthlyRent.toString(),
+        deposit: property.deposit?.toString() || "",
+      })
     }
   }
 
@@ -156,7 +213,7 @@ export default function UsersPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowAddForm(false)}
+                onClick={resetForm}
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -164,38 +221,102 @@ export default function UsersPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleAddTenant} className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Email</label>
-                  <Input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="tenant@example.com"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Name</label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="John Doe"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Password</label>
-                  <Input
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder="Min 6 characters"
-                    required
-                    minLength={6}
-                  />
+              <div className="space-y-4">
+                <h3 className="font-semibold text-sm text-gray-600">Tenant Information</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Email *</label>
+                    <Input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="tenant@example.com"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Name</label>
+                    <Input
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="John Doe"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Password *</label>
+                    <Input
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      placeholder="Min 6 characters"
+                      required
+                      minLength={6}
+                    />
+                  </div>
                 </div>
               </div>
-              <div className="flex gap-2">
+
+              <div className="border-t pt-4">
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-sm text-gray-600">Lease Information (Optional)</h3>
+                  <p className="text-xs text-gray-500">Select a property to create a lease for this tenant</p>
+                  
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Property</label>
+                      <select
+                        value={selectedProperty}
+                        onChange={(e) => handlePropertyChange(e.target.value)}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="">-- Select Property --</option>
+                        {properties.map((property) => (
+                          <option key={property.id} value={property.id}>
+                            {property.address}, {property.city}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Start Date *</label>
+                      <Input
+                        type="date"
+                        value={formData.startDate}
+                        onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                        required={!!selectedProperty}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">End Date</label>
+                      <Input
+                        type="date"
+                        value={formData.endDate}
+                        onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Monthly Rent (RON)</label>
+                      <Input
+                        type="number"
+                        value={formData.monthlyRent}
+                        onChange={(e) => setFormData({ ...formData, monthlyRent: e.target.value })}
+                        placeholder="Auto-filled from property"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Deposit (RON)</label>
+                      <Input
+                        type="number"
+                        value={formData.deposit}
+                        onChange={(e) => setFormData({ ...formData, deposit: e.target.value })}
+                        placeholder="Auto-filled from property"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-4">
                 <Button type="submit">
                   <UserPlus className="h-4 w-4 mr-2" />
                   Create Tenant Profile
@@ -203,10 +324,7 @@ export default function UsersPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => {
-                    setShowAddForm(false)
-                    setFormData({ email: "", password: "", name: "", role: "RENTER" })
-                  }}
+                  onClick={resetForm}
                 >
                   Cancel
                 </Button>

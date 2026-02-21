@@ -14,11 +14,13 @@ export default function RegisterPage() {
   const t = useTranslations('auth');
   const pathname = usePathname()
   const locale = pathname?.split('/')[1] || 'en'
+  const [selectedRole, setSelectedRole] = useState<"RENTER" | "MANAGER" | "ADMIN">("RENTER")
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     confirmPassword: "",
+    ownerSlug: "",
   })
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
@@ -48,7 +50,8 @@ export default function RegisterPage() {
           name: formData.name,
           email: formData.email,
           password: formData.password,
-          role: "RENTER",
+          role: selectedRole,
+          ownerSlug: selectedRole === "ADMIN" ? formData.ownerSlug || undefined : undefined,
         }),
       })
 
@@ -108,6 +111,52 @@ export default function RegisterPage() {
                 {error}
               </div>
             )}
+            
+            {/* Role Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">I am a...</label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedRole("RENTER")}
+                  className={`p-3 rounded-md border text-sm font-medium transition-colors ${
+                    selectedRole === "RENTER"
+                      ? "bg-blue-50 border-blue-500 text-blue-700"
+                      : "border-gray-200 hover:bg-gray-50"
+                  }`}
+                >
+                  🏠 Tenant
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedRole("MANAGER")}
+                  className={`p-3 rounded-md border text-sm font-medium transition-colors ${
+                    selectedRole === "MANAGER"
+                      ? "bg-blue-50 border-blue-500 text-blue-700"
+                      : "border-gray-200 hover:bg-gray-50"
+                  }`}
+                >
+                  📋 Manager
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedRole("ADMIN")}
+                  className={`p-3 rounded-md border text-sm font-medium transition-colors ${
+                    selectedRole === "ADMIN"
+                      ? "bg-blue-50 border-blue-500 text-blue-700"
+                      : "border-gray-200 hover:bg-gray-50"
+                  }`}
+                >
+                  👑 Owner
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">
+                {selectedRole === "RENTER" && "Looking for a rental property"}
+                {selectedRole === "MANAGER" && "Managing properties for owners"}
+                {selectedRole === "ADMIN" && "Own rental properties (auto-approved)"}
+              </p>
+            </div>
+
             <div className="space-y-2">
               <label htmlFor="name" className="text-sm font-medium">
                 {t('name')}
@@ -134,6 +183,35 @@ export default function RegisterPage() {
                 required
               />
             </div>
+            
+            {/* Owner Slug Field - Only for Owners */}
+            {selectedRole === "ADMIN" && (
+              <div className="space-y-2">
+                <label htmlFor="ownerSlug" className="text-sm font-medium">
+                  Owner Profile URL
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500">rentalmanager.ro/owner/</span>
+                  <Input
+                    id="ownerSlug"
+                    type="text"
+                    placeholder="your-name"
+                    value={formData.ownerSlug}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      ownerSlug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') 
+                    })}
+                    pattern="[a-z0-9-]+"
+                    title="Lowercase letters, numbers, and hyphens only"
+                    required
+                  />
+                </div>
+                <p className="text-xs text-gray-500">
+                  This will be your unique profile URL (e.g., rentalmanager.ro/owner/john-doe)
+                </p>
+              </div>
+            )}
+            
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium">
                 {t('password')}
