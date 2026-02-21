@@ -17,15 +17,6 @@ enum Role {
   RENTER    // Limited access to their own data
 }
 
-// Subscription status
-enum SubscriptionStatus {
-  ACTIVE
-  INACTIVE
-  CANCELLED
-  EXPIRED
-  TRIAL
-}
-
 // Meter reading types
 enum ReadingType {
   INITIAL   // When renter moves in
@@ -49,27 +40,17 @@ model User {
   role          Role      @default(RENTER)
   approved      Boolean   @default(false)  // Must be approved by admin
   active        Boolean   @default(true)   // Can be disabled when moving out
-  
-  // Owner-specific fields
-  ownerSlug     String?   @unique  // Permanent link slug for owner (e.g., Property_mngmt.com/owner/slug)
-  stripeCustomerId String? @unique // Stripe customer ID
-  
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-
+  
   // Relations
   rentedProperties   Lease[]       @relation("Renter")
   managedProperties  Property[]    @relation("Manager")
   meterReadings      MeterReading[]
   bills              Bill[]
-  subscription       Subscription?
-  payments           Payment[]
-  sentMessages       ContactMessage[] @relation("ContactMessageSender")
-  receivedMessages   ContactMessage[] @relation("ContactMessageRecipient")
-
+  
   @@index([email])
   @@index([role])
-  @@index([ownerSlug])
 }
 
 // Property model
@@ -92,8 +73,6 @@ model Property {
   
   // Status
   available     Boolean   @default(true)
-  subscriptionRequired Boolean @default(true)  // Requires active subscription to manage
-  isSubscriptionActive Boolean @default(false) // Is currently covered by subscription
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   
@@ -103,8 +82,7 @@ model Property {
   manager        User?     @relation("Manager", fields: [managerId], references: [id])
   leases         Lease[]
   meters         Meter[]
-  contactMessages ContactMessage[]
-
+  
   @@index([available])
   @@index([managerId])
 }
@@ -299,84 +277,4 @@ model AuditLog {
   @@index([userId])
   @@index([entity])
   @@index([createdAt])
-}
-
-// Subscription model for property management pricing
-model Subscription {
-  id                String             @id @default(cuid())
-  userId            String             @unique
-  user              User               @relation(fields: [userId], references: [id])
-  
-  // Subscription details
-  status            SubscriptionStatus @default(INACTIVE)
-  stripeSubscriptionId String?         @unique // Stripe subscription ID
-  
-  // Pricing: 50 EUR per year per property
-  pricePerProperty  Int              @default(5000) // In cents (50 EUR = 5000 cents)
-  currency          String             @default("EUR")
-  billingPeriod     String             @default("yearly")
-  
-  // Buy one get one free: paidProperties = 1, coveredProperties = 2
-  paidProperties    Int                @default(0) // Properties paid for
-  coveredProperties Int                @default(0) // Total properties covered (paid * 2)
-  
-  // Period
-  currentPeriodStart DateTime?
-  currentPeriodEnd   DateTime?
-  trialEnd           DateTime?
-  
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  
-  @@index([userId])
-  @@index([status])
-}
-
-// Payment/Invoice model
-model Payment {
-  id                String   @id @default(cuid())
-  userId            String
-  user              User     @relation(fields: [userId], references: [id])
-  
-  // Payment details
-  stripePaymentId   String?  @unique // Stripe payment/intent ID
-  amount            Int      // In cents
-  currency          String   @default("EUR")
-  status            String   @default("pending") // pending, succeeded, failed, refunded
-  
-  // What was paid for
-  propertiesCount   Int      // Number of properties paid for in this payment
-  promotionalCredits Int     @default(0) // Free properties from BOGO deal
-  
-  // Period covered
-  periodStart       DateTime
-  periodEnd         DateTime
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
-  @@index([userId])
-  @@index([status])
-  @@index([createdAt])
-}
-
-// Contact message model for tenant-owner communication
-model ContactMessage {
-  id          String   @id @default(cuid())
-  propertyId  String
-  property    Property @relation(fields: [propertyId], references: [id])
-  senderId    String
-  sender      User     @relation(fields: [senderId], references: [id], onDelete: Cascade, name: "ContactMessageSender")
-  recipientId String
-  recipient   User     @relation(fields: [recipientId], references: [id], onDelete: Cascade, name: "ContactMessageRecipient")
-  subject     String
-  message     String
-  status      String   @default("PENDING") // PENDING, READ, REPLIED
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([propertyId])
-  @@index([senderId])
-  @@index([recipientId])
-  @@index([status])
 }

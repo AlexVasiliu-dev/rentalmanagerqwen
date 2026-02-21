@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function logout() {
-    await SecureStore.removeItemAsync('auth_token');
+    await SecureStore.deleteItemAsync('auth_token');
     setUser(null);
   }
 

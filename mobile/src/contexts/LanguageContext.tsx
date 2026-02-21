@@ -89,7 +89,6 @@ const translations: Record<Language, Record<string, string>> = {
     'contact.email': 'Email',
     'contact.phone': 'Telefon',
     'contact.call': 'Apelare',
-    'contact.email': 'Email',
     'contact.sendMessage': 'Trimite Mesaj',
     'contact.subject': 'Subiect',
     'contact.message': 'Mesaj',

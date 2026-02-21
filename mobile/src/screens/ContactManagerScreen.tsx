@@ -9,19 +9,7 @@ import {
 } from 'react-native';
 import { useLanguage } from '../contexts/LanguageContext';
 
-interface ContactManagerScreenProps {
-  route: {
-    params: {
-      manager: {
-        name: string | null;
-        email: string;
-        phone?: string | null;
-      };
-    };
-  };
-}
-
-export default function ContactManagerScreen({ route }: ContactManagerScreenProps) {
+export default function ContactManagerScreen({ route }: any) {
   const { t } = useLanguage();
   const { manager } = route.params;
   const firstName = manager.name?.split(' ')[0] || manager.email.split('@')[0];

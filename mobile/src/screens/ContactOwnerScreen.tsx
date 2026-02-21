@@ -13,16 +13,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 
-interface ContactOwnerScreenProps {
-  route: {
-    params: {
-      propertyId: string;
-    };
-  };
-  navigation: any;
-}
-
-export default function ContactOwnerScreen({ route, navigation }: ContactOwnerScreenProps) {
+export default function ContactOwnerScreen({ route, navigation }: any) {
   const { t } = useLanguage();
   const { user } = useAuth();
   const { propertyId } = route.params;
