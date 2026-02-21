@@ -4,9 +4,10 @@ import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useTranslations } from 'next-intl';
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Check, X, UserCheck, UserX } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Check, X, UserCheck, UserX, Plus, UserPlus } from "lucide-react"
 
 interface User {
   id: string
@@ -27,6 +28,13 @@ export default function UsersPage() {
   const { data: session } = useSession()
   const [users, setUsers] = useState<User[]>([])
   const [filter, setFilter] = useState<"all" | "pending" | "active">("all")
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    name: "",
+    role: "RENTER" as "RENTER",
+  })
 
   useEffect(() => {
     fetchUsers()
@@ -76,6 +84,37 @@ export default function UsersPage() {
     updateUser(userId, { active: false })
   }
 
+  const handleAddTenant = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    try {
+      const response = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          name: formData.name || undefined,
+          role: "RENTER",
+          approved: true,
+          active: true,
+        }),
+      })
+
+      if (response.ok) {
+        await fetchUsers()
+        setShowAddForm(false)
+        setFormData({ email: "", password: "", name: "", role: "RENTER" })
+      } else {
+        const error = await response.json()
+        alert(error.error || "Failed to create tenant")
+      }
+    } catch (error) {
+      console.error("Error creating tenant:", error)
+      alert("Failed to create tenant")
+    }
+  }
+
   const filteredUsers = users.filter((user) => {
     if (filter === "pending") return !user.approved
     if (filter === "active") return user.active && user.approved
@@ -97,10 +136,85 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">{t('users')}</h1>
-        <p className="text-gray-600">Manage user accounts and approvals</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">{t('users')}</h1>
+          <p className="text-gray-600">Manage user accounts and approvals</p>
+        </div>
+        <Button onClick={() => setShowAddForm(true)}>
+          <UserPlus className="h-4 w-4 mr-2" />
+          Add Tenant
+        </Button>
       </div>
+
+      {/* Add Tenant Form */}
+      {showAddForm && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Create New Tenant</CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAddForm(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleAddTenant} className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Email</label>
+                  <Input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="tenant@example.com"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Name</label>
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="John Doe"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Password</label>
+                  <Input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Min 6 characters"
+                    required
+                    minLength={6}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit">
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Create Tenant Profile
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowAddForm(false)
+                    setFormData({ email: "", password: "", name: "", role: "RENTER" })
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex gap-2">
         <Button
