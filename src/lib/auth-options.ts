@@ -48,6 +48,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
+          ownerSlug: user.ownerSlug,
         }
       },
     }),
@@ -60,13 +61,15 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.role = user.role
+        token.ownerSlug = user.ownerSlug
       }
       return token
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string
-        session.user.role = token.role as "ADMIN" | "MANAGER" | "RENTER"
+        session.user.role = token.role as "SUPERADMIN" | "ADMIN" | "MANAGER" | "RENTER"
+        session.user.ownerSlug = token.ownerSlug as string
       }
       return session
     },

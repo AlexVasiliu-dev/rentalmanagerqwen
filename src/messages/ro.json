@@ -173,8 +173,8 @@
     "meterReadings": "Citiri Contoare",
     "consumption": "Consum",
     "pricePerUnit": "Preț per Unitate",
-    "previousReading": "Citea Anterioară",
-    "currentReading": "Citea Curentă"
+    "previousReading": "Citire Anterioară",
+    "currentReading": "Citire Curentă"
   },
   "meters": {
     "title": "Contoare",
@@ -184,19 +184,19 @@
     "type": "Tip Contor",
     "serialNumber": "Număr Serial",
     "location": "Locație",
-    "reading": "Citea",
-    "addReading": "Adaugă Citea",
+    "reading": "Citire",
+    "addReading": "Adaugă Citire",
     "uploadPhoto": "Încarcă Fotografie",
-    "readingType": "Tip Citea",
+    "readingType": "Tip Citire",
     "initial": "Inițială",
     "monthly": "Lunară",
     "final": "Finală",
-    "readingDate": "Data Citea",
+    "readingDate": "Data Citire",
     "verified": "Verificat",
     "pending": "În Așteptare",
     "notes": "Note",
     "photoRequired": "Este necesară fotografia contorului",
-    "uploadSuccess": "Citea a fost încărcată cu succes",
+    "uploadSuccess": "Citirea a fost încărcată cu succes",
     "billGenerated": "Factura va fi generată automat"
   },
   "tenants": {

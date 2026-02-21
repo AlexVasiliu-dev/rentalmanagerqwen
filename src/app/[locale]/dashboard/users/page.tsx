@@ -34,6 +34,7 @@ interface Property {
 export default function UsersPage() {
   const t = useTranslations('dashboard');
   const tCommon = useTranslations('common');
+  const tRoles = useTranslations('roles');
   const { data: session } = useSession()
   const [users, setUsers] = useState<User[]>([])
   const [filter, setFilter] = useState<"all" | "pending" | "active">("all")
@@ -141,16 +142,26 @@ export default function UsersPage() {
       })
 
       if (response.ok) {
+        const result = await response.json()
         await fetchUsers()
-        setShowAddForm(false)
-        resetForm()
+        await fetchProperties()
+        // Redirect to contracts page with success message
+        const leaseId = result.leaseId || ''
+        if (leaseId) {
+          // Redirect to contract view page
+          window.location.href = `/${locale}/dashboard/contracts/${leaseId}?success=tenant-added`
+        } else {
+          setShowAddForm(false)
+          resetForm()
+          alert("Chiriaș creat fără contract")
+        }
       } else {
         const error = await response.json()
-        alert(error.error || "Failed to create tenant")
+        alert(error.error || "Eroare la crearea chiriașului")
       }
     } catch (error) {
       console.error("Error creating tenant:", error)
-      alert("Failed to create tenant")
+      alert("Eroare la crearea chiriașului")
     }
   }
 
@@ -184,7 +195,7 @@ export default function UsersPage() {
         <h1 className="text-3xl font-bold mb-6">{t('users')}</h1>
         <Card>
           <CardContent className="py-8">
-            <p className="text-gray-600">Only admins can manage users.</p>
+            <p className="text-gray-600">Doar administratorii pot gestiona utilizatorii.</p>
           </CardContent>
         </Card>
       </div>
@@ -195,12 +206,12 @@ export default function UsersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{t('users')}</h1>
-          <p className="text-gray-600">Manage user accounts and approvals</p>
+          <h1 className="text-3xl font-bold">Utilizatori</h1>
+          <p className="text-gray-600">Gestionează conturile utilizatorilor și aprobările</p>
         </div>
         <Button onClick={() => setShowAddForm(true)}>
           <UserPlus className="h-4 w-4 mr-2" />
-          Add Tenant
+          Adaugă Chiriaș
         </Button>
       </div>
 
@@ -209,7 +220,7 @@ export default function UsersPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Create New Tenant</CardTitle>
+              <CardTitle>Adaugă Chiriaș</CardTitle>
               <Button
                 variant="ghost"
                 size="sm"
@@ -222,7 +233,7 @@ export default function UsersPage() {
           <CardContent>
             <form onSubmit={handleAddTenant} className="space-y-4">
               <div className="space-y-4">
-                <h3 className="font-semibold text-sm text-gray-600">Tenant Information</h3>
+                <h3 className="font-semibold text-sm text-gray-600">Informații Chiriaș</h3>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium mb-1 block">Email *</label>
@@ -230,25 +241,25 @@ export default function UsersPage() {
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="tenant@example.com"
+                      placeholder="chirias@exemplu.ro"
                       required
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Name</label>
+                    <label className="text-sm font-medium mb-1 block">Nume</label>
                     <Input
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="John Doe"
+                      placeholder="Ion Popescu"
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Password *</label>
+                    <label className="text-sm font-medium mb-1 block">Parolă *</label>
                     <Input
                       type="password"
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      placeholder="Min 6 characters"
+                      placeholder="Minim 6 caractere"
                       required
                       minLength={6}
                     />
@@ -258,18 +269,18 @@ export default function UsersPage() {
 
               <div className="border-t pt-4">
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-sm text-gray-600">Lease Information (Optional)</h3>
-                  <p className="text-xs text-gray-500">Select a property to create a lease for this tenant</p>
+                  <h3 className="font-semibold text-sm text-gray-600">Informații Contract (Opțional)</h3>
+                  <p className="text-xs text-gray-500">Selectează o proprietate pentru a crea un contract pentru acest chiriaș</p>
                   
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Property</label>
+                      <label className="text-sm font-medium mb-1 block">Proprietate</label>
                       <select
                         value={selectedProperty}
                         onChange={(e) => handlePropertyChange(e.target.value)}
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
-                        <option value="">-- Select Property --</option>
+                        <option value="">-- Selectează Proprietatea --</option>
                         {properties.map((property) => (
                           <option key={property.id} value={property.id}>
                             {property.address}, {property.city}
@@ -278,7 +289,7 @@ export default function UsersPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Start Date *</label>
+                      <label className="text-sm font-medium mb-1 block">Data Început *</label>
                       <Input
                         type="date"
                         value={formData.startDate}
@@ -287,7 +298,7 @@ export default function UsersPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium mb-1 block">End Date</label>
+                      <label className="text-sm font-medium mb-1 block">Data Sfârșit</label>
                       <Input
                         type="date"
                         value={formData.endDate}
@@ -295,21 +306,21 @@ export default function UsersPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Monthly Rent (RON)</label>
+                      <label className="text-sm font-medium mb-1 block">Chirie Lunară (RON)</label>
                       <Input
                         type="number"
                         value={formData.monthlyRent}
                         onChange={(e) => setFormData({ ...formData, monthlyRent: e.target.value })}
-                        placeholder="Auto-filled from property"
+                        placeholder="Completat automat din proprietate"
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Deposit (RON)</label>
+                      <label className="text-sm font-medium mb-1 block">Garanție (RON)</label>
                       <Input
                         type="number"
                         value={formData.deposit}
                         onChange={(e) => setFormData({ ...formData, deposit: e.target.value })}
-                        placeholder="Auto-filled from property"
+                        placeholder="Completat automat din proprietate"
                       />
                     </div>
                   </div>
@@ -319,14 +330,14 @@ export default function UsersPage() {
               <div className="flex gap-2 pt-4">
                 <Button type="submit">
                   <UserPlus className="h-4 w-4 mr-2" />
-                  Create Tenant Profile
+                  Creează Profil Chiriaș
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={resetForm}
                 >
-                  Cancel
+                  Anulează
                 </Button>
               </div>
             </form>
@@ -339,19 +350,19 @@ export default function UsersPage() {
           variant={filter === "all" ? "default" : "outline"}
           onClick={() => setFilter("all")}
         >
-          All Users
+          Toți Utilizatorii
         </Button>
         <Button
           variant={filter === "pending" ? "default" : "outline"}
           onClick={() => setFilter("pending")}
         >
-          Pending Approval
+          În Așteptare
         </Button>
         <Button
           variant={filter === "active" ? "default" : "outline"}
           onClick={() => setFilter("active")}
         >
-          Active
+          Activi
         </Button>
       </div>
 
@@ -388,14 +399,14 @@ export default function UsersPage() {
                         ? "bg-green-100 text-green-800"
                         : "bg-yellow-100 text-yellow-800"
                     }`}>
-                      {user.approved ? "Approved" : "Pending"}
+                      {user.approved ? "Aprobat" : "În Așteptare"}
                     </span>
                     <span className={`px-2 py-1 rounded text-xs ${
                       user.active
                         ? "bg-blue-100 text-blue-800"
                         : "bg-red-100 text-red-800"
                     }`}>
-                      {user.active ? "Active" : "Inactive"}
+                      {user.active ? "Activ" : "Inactiv"}
                     </span>
                   </div>
                 </TableCell>
@@ -411,7 +422,7 @@ export default function UsersPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleApprove(user.id)}
-                          title="Approve"
+                          title="Aprobă"
                         >
                           <Check className="h-4 w-4 text-green-600" />
                         </Button>
@@ -419,7 +430,7 @@ export default function UsersPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleReject(user.id)}
-                          title="Reject"
+                          title="Respinge"
                         >
                           <X className="h-4 w-4 text-red-600" />
                         </Button>
@@ -431,7 +442,7 @@ export default function UsersPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDeactivate(user.id)}
-                            title="Deactivate"
+                            title="Dezactivează"
                           >
                             <UserX className="h-4 w-4 text-orange-600" />
                           </Button>
@@ -440,7 +451,7 @@ export default function UsersPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleActivate(user.id)}
-                            title="Activate"
+                            title="Activează"
                           >
                             <UserCheck className="h-4 w-4 text-green-600" />
                           </Button>

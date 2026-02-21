@@ -65,10 +65,6 @@ export async function GET(request: NextRequest) {
             email: true,
           },
         },
-        bills: {
-          orderBy: { periodEnd: "desc" },
-          take: 5,
-        },
       },
       orderBy: { startDate: "desc" },
     })
@@ -136,6 +132,8 @@ export async function POST(request: NextRequest) {
         endDate: validatedData.endDate ? new Date(validatedData.endDate) : null,
         approvedBy: session.user.id,
         approvedAt: new Date(),
+        ownerSigned: true,
+        tenantSigned: false,
       },
       include: {
         property: {

@@ -6,7 +6,7 @@ import { signOut } from "next-auth/react"
 import { usePathname } from "next/navigation"
 import { useTranslations } from 'next-intl';
 import { Button } from "@/components/ui/button"
-import { Home, Users, FileText, DollarSign, LogOut, Menu, LayoutDashboard, CreditCard } from "lucide-react"
+import { Home, Users, FileText, DollarSign, LogOut, Menu, LayoutDashboard, CreditCard, User } from "lucide-react"
 import { useState } from "react"
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { LocaleLink } from '@/components/LocaleLink';
@@ -43,18 +43,23 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const navigation = [
     { name: t('title'), href: "/dashboard", icon: LayoutDashboard },
-    { name: t('properties'), href: "/dashboard/properties", icon: Home },
-    { name: tNav('users') || "Users", href: "/dashboard/users", icon: Users, roles: ["ADMIN"] },
+    { name: t('properties'), href: "/dashboard/properties", icon: Home, roles: ["ADMIN", "MANAGER"] },
+    { name: tNav('users') || "Utilizatori", href: "/dashboard/users", icon: Users, roles: ["ADMIN"] },
     { name: t('leases'), href: "/dashboard/leases", icon: FileText },
     { name: t('meterReadings'), href: "/dashboard/meter-readings", icon: FileText },
     { name: t('bills'), href: "/dashboard/bills", icon: DollarSign },
     { name: t('reports'), href: "/dashboard/reports", icon: DollarSign, roles: ["ADMIN", "MANAGER"] },
-    { name: t('subscription'), href: "/dashboard/subscription", icon: CreditCard },
+    { name: t('subscription'), href: "/dashboard/subscription", icon: CreditCard, roles: ["ADMIN", "MANAGER"] },
+    { name: "Profil", href: "/dashboard/profile", icon: User, roles: ["ADMIN"] },
   ]
 
-  const filteredNavigation = navigation.filter(
-    (item) => !item.roles || (session?.user.role && item.roles.includes(session.user.role))
-  )
+  // Filter navigation based on role
+  const filteredNavigation = navigation.filter((item) => {
+    // If no roles specified, show to everyone
+    if (!item.roles) return true
+    // If roles specified, check if user has one of those roles
+    return session?.user.role && item.roles.includes(session.user.role)
+  })
 
   // Add locale prefix to all navigation links
   const localizedNavigation = filteredNavigation.map(item => ({

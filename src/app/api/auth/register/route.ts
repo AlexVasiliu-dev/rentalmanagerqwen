@@ -4,11 +4,17 @@ import bcrypt from "bcryptjs"
 import { z } from "zod"
 
 const registerSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  role: z.enum(["ADMIN", "MANAGER", "RENTER"]).optional(),
-  // For owners - generate unique slug
+  email: z.string().email("Adresă de email invalidă"),
+  password: z.string().min(8, "Parola trebuie să aibă minim 8 caractere"),
+  name: z.string().min(2, "Numele trebuie să aibă minim 2 caractere"),
+  phone: z.string().optional(),
+  role: z.enum(["SUPERADMIN", "ADMIN", "MANAGER", "RENTER"]).optional(),
+  // Business details - required for OWNERS (ADMIN)
+  companyName: z.string().optional(),
+  companyRegNumber: z.string().optional(),
+  companyFiscalCode: z.string().optional(),
+  workingEmail: z.string().email().optional().or(z.literal("")),
+  // Owner slug - generated from business name
   ownerSlug: z.string().optional(),
 })
 
@@ -24,19 +30,37 @@ export async function POST(request: NextRequest) {
 
     if (existingUser) {
       return NextResponse.json(
-        { error: "User with this email already exists" },
+        { error: "Există deja un utilizator cu acest email" },
         { status: 400 }
       )
     }
 
-    // Check if ownerSlug is already taken (for owners)
-    if (validatedData.ownerSlug) {
+    // For OWNERS (ADMIN): require business details and generate slug
+    let ownerSlug = validatedData.ownerSlug
+    if (validatedData.role === "ADMIN") {
+      if (!validatedData.companyName) {
+        return NextResponse.json(
+          { error: "Numele companiei este obligatoriu pentru proprietari" },
+          { status: 400 }
+        )
+      }
+      
+      // Generate slug from company name if not provided
+      if (!ownerSlug) {
+        ownerSlug = validatedData.companyName
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+      }
+      
+      // Check if slug is already taken
       const existingSlug = await prisma.user.findUnique({
-        where: { ownerSlug: validatedData.ownerSlug },
+        where: { ownerSlug },
       })
+      
       if (existingSlug) {
         return NextResponse.json(
-          { error: "This owner URL is already taken. Try a different one." },
+          { error: "Acest nume de afacere este deja folosit. Te rugăm să alegi altul." },
           { status: 400 }
         )
       }
@@ -45,22 +69,20 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(validatedData.password, 12)
 
-    // Determine role - map "OWNER" to "ADMIN"
-    const role = validatedData.role === "ADMIN" ? "ADMIN" : (validatedData.role || "RENTER")
-    
-    // Create user data
+    // Create user data - always ADMIN (Owner) for main site registration
     const userData: Record<string, unknown> = {
       email: validatedData.email,
       password: hashedPassword,
       name: validatedData.name,
-      role: role,
-      approved: role === "ADMIN" || false, // Auto-approve admins, others need approval
+      phone: validatedData.phone,
+      role: "ADMIN", // Only owners can register on main site
+      approved: true, // Auto-approved
       active: true,
-    }
-
-    // Add ownerSlug for owners
-    if (role === "ADMIN" && validatedData.ownerSlug) {
-      userData.ownerSlug = validatedData.ownerSlug
+      ownerSlug: ownerSlug,
+      companyName: validatedData.companyName,
+      companyRegNumber: validatedData.companyRegNumber,
+      companyFiscalCode: validatedData.companyFiscalCode,
+      workingEmail: validatedData.workingEmail,
     }
 
     // Create user
@@ -73,15 +95,13 @@ export async function POST(request: NextRequest) {
         role: true,
         approved: true,
         ownerSlug: true,
-        createdAt: true,
+        companyName: true,
       },
     })
 
     return NextResponse.json(
       {
-        message: role === "ADMIN" 
-          ? "Registration successful. Your owner profile has been created!"
-          : "Registration successful. Please wait for approval.",
+        message: "Înregistrare reușită! Contul tău de proprietar a fost creat.",
         user,
       },
       { status: 201 }
@@ -96,7 +116,7 @@ export async function POST(request: NextRequest) {
 
     console.error("Registration error:", error)
     return NextResponse.json(
-      { error: "Something went wrong" },
+      { error: "A apărut o eroare la înregistrare" },
       { status: 500 }
     )
   }

@@ -35,11 +35,32 @@ export default function SignInPage() {
       if (result?.error) {
         setError(result.error)
       } else {
-        router.push(`/${locale}/dashboard`)
+        // Fetch user info after successful login to get ownerSlug
+        try {
+          const userResponse = await fetch("/api/auth/me")
+          if (userResponse.ok) {
+            const userData = await userResponse.json()
+            // Redirect owners to properties page, SUPERADMIN and others to dashboard
+            if (userData.role === "SUPERADMIN") {
+              router.push(`/${locale}/dashboard`)
+            } else if (userData.role === "ADMIN" && userData.ownerSlug) {
+              // For now, redirect to dashboard - business pages coming soon
+              router.push(`/${locale}/dashboard`)
+            } else {
+              router.push(`/${locale}/dashboard`)
+            }
+          } else {
+            // Fallback to dashboard if we can't get user info
+            router.push(`/${locale}/dashboard`)
+          }
+        } catch {
+          // If fetch fails, still redirect to dashboard
+          router.push(`/${locale}/dashboard`)
+        }
         router.refresh()
       }
     } catch {
-      setError("An unexpected error occurred")
+      setError("A apărut o eroare neașteptată")
     } finally {
       setLoading(false)
     }

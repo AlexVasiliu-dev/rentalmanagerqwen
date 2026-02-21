@@ -5,6 +5,7 @@ import { Home, Users, FileText, Shield, ArrowRight } from "lucide-react"
 import { getTranslations } from 'next-intl/server';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { LocaleLink } from '@/components/LocaleLink';
+import { GDPRCookieNotice } from '@/components/GDPRCookieNotice';
 
 export default async function HomePage() {
   const t = await getTranslations('home');
@@ -142,6 +143,9 @@ export default async function HomePage() {
           </p>
         </div>
       </footer>
+
+      {/* GDPR Cookie Notice */}
+      <GDPRCookieNotice />
     </div>
   )
 }

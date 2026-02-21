@@ -118,6 +118,8 @@ export async function POST(request: NextRequest) {
         },
       })
 
+      let leaseId: string | null = null
+
       // Create lease if property and dates are provided (for tenants)
       if (validatedData.propertyId && validatedData.startDate && validatedData.role === "RENTER") {
         // Check if property has an active lease
@@ -129,7 +131,7 @@ export async function POST(request: NextRequest) {
         })
 
         if (existingLease) {
-          throw new Error("Property already has an active lease")
+          throw new Error("Proprietatea are deja un contract activ")
         }
 
         // Get property details for rent info
@@ -139,7 +141,7 @@ export async function POST(request: NextRequest) {
         })
 
         if (!property) {
-          throw new Error("Property not found")
+          throw new Error("Proprietatea nu a fost găsită")
         }
 
         // Create lease
@@ -153,11 +155,21 @@ export async function POST(request: NextRequest) {
             deposit: validatedData.deposit || property.deposit,
             approvedBy: session.user.id,
             approvedAt: new Date(),
+            ownerSigned: true, // Owner signs automatically when creating
+            tenantSigned: false, // Tenant needs to sign
           },
+        })
+
+        leaseId = lease.id
+
+        // Mark property as unavailable
+        await tx.property.update({
+          where: { id: validatedData.propertyId },
+          data: { available: false },
         })
       }
 
-      return user
+      return { user, leaseId }
     })
 
     // Create audit log
@@ -166,12 +178,16 @@ export async function POST(request: NextRequest) {
         userId: session.user.id,
         action: "CREATE",
         entity: "User",
-        entityId: result.id,
-        details: { email: result.email, role: result.role },
+        entityId: result.user.id,
+        details: { email: result.user.email, role: result.user.role, leaseId: result.leaseId },
       },
     })
 
-    return NextResponse.json(result, { status: 201 })
+    return NextResponse.json({
+      message: "Chiriaș creat cu succes",
+      user: result.user,
+      leaseId: result.leaseId,
+    }, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

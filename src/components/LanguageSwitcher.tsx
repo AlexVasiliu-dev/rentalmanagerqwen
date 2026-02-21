@@ -1,7 +1,7 @@
 'use client';
 
 import {useLocale} from 'next-intl';
-import {useRouter, usePathname} from 'next/navigation';
+import {useRouter} from 'next/navigation';
 import {useTransition} from 'react';
 import {routing} from '@/i18n-routing';
 import {Globe} from 'lucide-react';
@@ -14,12 +14,16 @@ const localeNames: Record<string, string> = {
 export function LanguageSwitcher() {
   const locale = useLocale();
   const router = useRouter();
-  const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
 
   function onSelectChange(newLocale: string) {
     startTransition(() => {
-      router.push(`/${newLocale}${pathname}`);
+      // Get current path without locale
+      const currentPath = window.location.pathname;
+      // Remove old locale prefix
+      const pathWithoutLocale = currentPath.replace(/^\/(en|ro)/, '');
+      // Navigate with new locale
+      router.push(`/${newLocale}${pathWithoutLocale}`);
     });
   }
 

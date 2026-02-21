@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
+import { useSearchParams, useRouter } from "next/navigation"
 import { useTranslations } from 'next-intl';
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
-import { Plus, X } from "lucide-react"
+import { Plus, X, FileText, CheckCircle } from "lucide-react"
 import { formatCurrency, formatDate } from "@/lib/utils"
+import { LocaleLink } from "@/components/LocaleLink"
 
 interface Lease {
   id: string
@@ -17,6 +19,8 @@ interface Lease {
   isActive: boolean
   monthlyRent: number
   deposit: number | null
+  ownerSigned: boolean
+  tenantSigned: boolean
   property: {
     id: string
     address: string
@@ -47,11 +51,14 @@ interface Property {
 export default function LeasesPage() {
   const t = useTranslations('leases');
   const tCommon = useTranslations('common');
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const { data: session } = useSession()
   const [leases, setLeases] = useState<Lease[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [properties, setProperties] = useState<Property[]>([])
   const [showForm, setShowForm] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     propertyId: "",
     renterId: "",
@@ -63,6 +70,14 @@ export default function LeasesPage() {
 
   useEffect(() => {
     fetchData()
+    // Check for success message from tenant addition
+    const success = searchParams.get('success')
+    const leaseId = searchParams.get('leaseId')
+    if (success === 'tenant-added' && leaseId) {
+      setSuccessMessage('Chiriaș adăugat cu succes! Proprietatea a fost închiriată.')
+      // Clean URL
+      router.replace('/dashboard/leases')
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -144,7 +159,7 @@ export default function LeasesPage() {
   }
 
   const handleEndLease = (leaseId: string) => {
-    if (confirm(tCommon('confirmDelete'))) {
+    if (confirm("Ești sigur că vrei să închei acest contract?")) {
       updateLease(leaseId, {
         isActive: false,
         endDate: new Date().toISOString().split("T")[0],
@@ -152,19 +167,62 @@ export default function LeasesPage() {
     }
   }
 
+  const handleMarkAsSigned = async (leaseId: string) => {
+    try {
+      const response = await fetch(`/api/leases/${leaseId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tenantSigned: true,
+          signedAt: new Date().toISOString(),
+        }),
+      })
+
+      if (response.ok) {
+        await fetchData()
+        alert("Contractul a fost marcat ca semnat de chiriaș!")
+      }
+    } catch (error) {
+      console.error("Error marking lease as signed:", error)
+      alert("Eroare la marcarea contractului ca semnat")
+    }
+  }
+
   const canManageLeases = session?.user.role === "ADMIN"
 
   return (
     <div className="space-y-6">
+      {successMessage && (
+        <Card className="bg-green-50 border-green-200">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="h-6 w-6 text-green-600" />
+              <div>
+                <p className="font-semibold text-green-800">Succes!</p>
+                <p className="text-sm text-green-700">{successMessage}</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-auto"
+                onClick={() => setSuccessMessage(null)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{t('title')}</h1>
-          <p className="text-gray-600">Manage rental agreements</p>
+          <h1 className="text-3xl font-bold">Contracte</h1>
+          <p className="text-gray-600">Gestionează contractele de închiriere</p>
         </div>
         {canManageLeases && (
           <Button onClick={() => setShowForm(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            {t('addLease')}
+            Adaugă Contract
           </Button>
         )}
       </div>
@@ -304,16 +362,35 @@ export default function LeasesPage() {
                 </TableCell>
                 {canManageLeases && (
                   <TableCell>
-                    {lease.isActive && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEndLease(lease.id)}
-                      >
-                        <X className="h-4 w-4" />
-                        End Lease
-                      </Button>
-                    )}
+                    <div className="flex gap-2">
+                      <LocaleLink href={`/dashboard/contracts/${lease.id}`}>
+                        <Button variant="outline" size="sm">
+                          <FileText className="h-4 w-4 mr-1" />
+                          Vezi Contract
+                        </Button>
+                      </LocaleLink>
+                      {lease.isActive && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEndLease(lease.id)}
+                        >
+                          <X className="h-4 w-4" />
+                          Reziliază
+                        </Button>
+                      )}
+                      {lease.isActive && lease.ownerSigned && !lease.tenantSigned && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-blue-600 border-blue-300"
+                          onClick={() => handleMarkAsSigned(lease.id)}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Semnat
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 )}
               </TableRow>
