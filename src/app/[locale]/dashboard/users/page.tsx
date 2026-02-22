@@ -45,6 +45,10 @@ export default function UsersPage() {
     email: "",
     password: "",
     name: "",
+    phone: "",
+    idCardSeries: "",
+    idCardNumber: "",
+    cnp: "",
     role: "RENTER" as "RENTER",
     startDate: "",
     endDate: "",
@@ -121,6 +125,10 @@ export default function UsersPage() {
         email: formData.email,
         password: formData.password,
         name: formData.name || undefined,
+        phone: formData.phone || undefined,
+        idCardSeries: formData.idCardSeries || undefined,
+        idCardNumber: formData.idCardNumber || undefined,
+        cnp: formData.cnp || undefined,
         role: "RENTER",
         approved: true,
         active: true,
@@ -246,11 +254,22 @@ export default function UsersPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Nume</label>
+                    <label className="text-sm font-medium mb-1 block">Nume *</label>
                     <Input
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="Ion Popescu"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Telefon *</label>
+                    <Input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="+40 7xx xxx xxx"
+                      required
                     />
                   </div>
                   <div>
@@ -263,6 +282,44 @@ export default function UsersPage() {
                       required
                       minLength={6}
                     />
+                  </div>
+                </div>
+
+                <div className="border-t pt-4 mt-2">
+                  <h4 className="font-semibold text-sm text-gray-600 mb-3">Acte de Identitate</h4>
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Serie Buletin *</label>
+                      <Input
+                        value={formData.idCardSeries}
+                        onChange={(e) => setFormData({ ...formData, idCardSeries: e.target.value.toUpperCase() })}
+                        placeholder="AB"
+                        maxLength={2}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Număr Buletin *</label>
+                      <Input
+                        value={formData.idCardNumber}
+                        onChange={(e) => setFormData({ ...formData, idCardNumber: e.target.value.toUpperCase() })}
+                        placeholder="123456"
+                        maxLength={6}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">CNP *</label>
+                      <Input
+                        value={formData.cnp}
+                        onChange={(e) => setFormData({ ...formData, cnp: e.target.value })}
+                        placeholder="19 caractere"
+                        maxLength={19}
+                        pattern="[0-9]{13}"
+                        title="CNP-ul trebuie să aibă 13 cifre"
+                        required
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

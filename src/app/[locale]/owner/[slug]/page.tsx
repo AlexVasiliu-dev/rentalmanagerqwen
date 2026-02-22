@@ -149,7 +149,7 @@ export default async function OwnerPage({ params }: OwnerPageProps) {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Rent</span>
-                      <span className="font-bold text-lg text-blue-600">{property.monthlyRent} EUR/month</span>
+                      <span className="font-bold text-lg text-blue-600">{property.monthlyRent} RON/lună</span>
                     </div>
                     <Link href={`/properties/${property.id}`}>
                       <Button className="w-full" variant="default">

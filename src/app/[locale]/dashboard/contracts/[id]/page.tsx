@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Download, Printer, ArrowLeft, CheckCircle, X } from "lucide-react"
-import { generateLeaseContractHTML } from "@/lib/contract-generator"
+import { generateLeaseContractRo, generateLeaseContractHTML } from "@/lib/contract-generator"
 
 interface ContractData {
   owner: {
@@ -59,9 +59,12 @@ export default function ContractViewPage() {
   const fetchContractData = async () => {
     try {
       const response = await fetch(`/api/leases/${leaseId}`)
+      const data = await response.json()
+      
       if (response.ok) {
-        const data = await response.json()
         setContractData(data)
+      } else {
+        console.error("Error fetching contract:", data.error)
       }
     } catch (error) {
       console.error("Error fetching contract data:", error)
@@ -72,7 +75,7 @@ export default function ContractViewPage() {
 
   const handlePrint = () => {
     if (!contractData) return
-    
+
     const contractHTML = generateLeaseContractHTML(contractData)
     const printWindow = window.open('', '_blank')
     if (printWindow) {
@@ -87,7 +90,7 @@ export default function ContractViewPage() {
 
   const handleDownload = () => {
     if (!contractData) return
-    
+
     const contractHTML = generateLeaseContractHTML(contractData)
     const blob = new Blob([contractHTML], { type: 'text/html' })
     const url = URL.createObjectURL(blob)
@@ -111,8 +114,16 @@ export default function ContractViewPage() {
   if (!contractData) {
     return (
       <Card>
+        <CardHeader>
+          <CardTitle>Eroare</CardTitle>
+        </CardHeader>
         <CardContent className="py-8">
-          <p className="text-center text-gray-600">Contractul nu a fost găsit</p>
+          <p className="text-center text-gray-600">
+            Contractul nu a fost găsit sau nu există date suficiente pentru generare.
+          </p>
+          <p className="text-center text-sm text-gray-500 mt-2">
+            Lease ID: {leaseId}
+          </p>
         </CardContent>
       </Card>
     )
@@ -166,21 +177,18 @@ export default function ContractViewPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Previzualizare Contract</CardTitle>
+          <CardTitle>Detalii Contract</CardTitle>
           <CardDescription>
             Proprietate: {contractData.property.address}, {contractData.property.city}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="prose max-w-none">
-            <div className="bg-gray-50 p-6 rounded-lg font-mono text-sm whitespace-pre-wrap">
-              {generateLeaseContractHTML(contractData)
-                .replace(/<[^>]*>/g, '')
-                .replace(/&nbsp;/g, ' ')
-                .substring(0, 2000)}...
+            <div className="bg-white border rounded-lg p-6 text-sm leading-relaxed whitespace-pre-wrap font-serif">
+              {generateLeaseContractRo(contractData)}
             </div>
             <p className="text-sm text-gray-600 mt-4">
-              Apasă "Printează Contractul" pentru a vedea contractul complet în format imprimabil.
+              Apasă "Printează Contractul" pentru a vedea contractul în format imprimabil.
             </p>
           </div>
         </CardContent>
@@ -211,6 +219,12 @@ export default function ContractViewPage() {
               <dl className="space-y-1 text-sm">
                 <dt className="text-gray-600">Nume:</dt>
                 <dd>{contractData.tenant.name || 'N/A'}</dd>
+                <dt className="text-gray-600">CI:</dt>
+                <dd>{contractData.tenant.idCardSeries && contractData.tenant.idCardNumber 
+                  ? `Seria ${contractData.tenant.idCardSeries} Nr. ${contractData.tenant.idCardNumber}` 
+                  : 'N/A'}</dd>
+                <dt className="text-gray-600">CNP:</dt>
+                <dd>{contractData.tenant.cnp || 'N/A'}</dd>
                 <dt className="text-gray-600">Email:</dt>
                 <dd>{contractData.tenant.email}</dd>
                 <dt className="text-gray-600">Telefon:</dt>
@@ -226,9 +240,9 @@ export default function ContractViewPage() {
                 <dt className="text-gray-600">Data Sfârșit:</dt>
                 <dd>{contractData.lease.endDate ? new Date(contractData.lease.endDate).toLocaleDateString('ro-RO') : ' Nedeterminată'}</dd>
                 <dt className="text-gray-600">Chirie Lunară:</dt>
-                <dd className="font-semibold">{contractData.lease.monthlyRent} EUR</dd>
+                <dd className="font-semibold">{contractData.lease.monthlyRent} RON</dd>
                 <dt className="text-gray-600">Garanție:</dt>
-                <dd>{contractData.lease.deposit || contractData.lease.monthlyRent} EUR</dd>
+                <dd>{contractData.lease.deposit || contractData.lease.monthlyRent} RON</dd>
               </dl>
             </div>
 

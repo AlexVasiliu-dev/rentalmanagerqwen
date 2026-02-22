@@ -19,6 +19,11 @@ model User {
   updatedAt         DateTime       @updatedAt
   ownerSlug         String?        @unique
   phone             String?
+  // Tenant-specific fields
+  idCardSeries      String?        // Buletin serie
+  idCardNumber      String?        // Buletin număr
+  cnp               String?        // Cod Numeric Personal
+  // Owner-specific fields
   companyFiscalCode String?
   companyName       String?
   companyRegNumber  String?
@@ -88,8 +93,10 @@ model Lease {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   ownerSigned     Boolean        @default(false)
-  signedAt        DateTime?
+  ownerSignedAt   DateTime?
   tenantSigned    Boolean        @default(false)
+  tenantSignedAt  DateTime?
+  signedAt        DateTime?
   bills           Bill[]
   property        Property       @relation(fields: [propertyId], references: [id])
   renter          User           @relation("Renter", fields: [renterId], references: [id])

@@ -11,6 +11,9 @@ interface ContractData {
     name: string | null
     email: string
     phone: string | null
+    idCardSeries: string | null
+    idCardNumber: string | null
+    cnp: string | null
   }
   property: {
     address: string
@@ -27,6 +30,12 @@ interface ContractData {
     monthlyRent: number
     deposit: number | null
     paymentDay: number
+  }
+  signatures: {
+    ownerSigned: boolean
+    ownerSignedAt: string | null
+    tenantSigned: boolean
+    tenantSignedAt: string | null
   }
 }
 
@@ -60,6 +69,8 @@ I. PĂRȚILE CONTRACTANTE
    ȘI
 
 2. ${data.tenant.name || 'CHIRIAȘ'}, 
+   ${data.tenant.idCardSeries && data.tenant.idCardNumber ? `având CI seria ${data.tenant.idCardSeries} nr. ${data.tenant.idCardNumber},` : ''}
+   ${data.tenant.cnp ? `CNP ${data.tenant.cnp},` : ''}
    Email: ${data.tenant.email}
    ${data.tenant.phone ? `Telefon: ${data.tenant.phone}` : ''}
    denumit în continuare "CHIRIAȘ"
@@ -85,10 +96,10 @@ Contractul se încheie pe perioada ${startDate} până la ${endDate}.
 IV. PREȚUL ȘI MODALITATEA DE PLATĂ
 
 Art. 4 - Chiria Lunară
-Chiria lunară este de ${data.lease.monthlyRent} EUR, plătibilă până în data de ${data.lease.paymentDay} a fiecărei luni.
+Chiria lunară este de ${data.lease.monthlyRent} RON, plătibilă până în data de ${data.lease.paymentDay} a fiecărei luni.
 
 Art. 5 - Garanția
-Garanția este de ${data.lease.deposit || data.lease.monthlyRent} EUR și va fi returnată la sfârșitul contractului, 
+Garanția este de ${data.lease.deposit || data.lease.monthlyRent} RON și va fi returnată la sfârșitul contractului, 
 dacă nu există daune sau datorii.
 
 Art. 6 - Utilitățile
@@ -130,7 +141,7 @@ Prezentul contract a fost încheiat în 2 exemplare originale, câte unul pentru
 _________________________          _________________________
 PROPRIETAR                          CHIRIAȘ
 
-Semnătura: ___________             Semnătura: ___________
+${data.signatures.ownerSigned ? `Semnat la data ${new Date(data.signatures.ownerSignedAt!).toLocaleDateString('ro-RO')}` : 'Semnătura:'}          ${data.signatures.tenantSigned ? `Semnat la data ${new Date(data.signatures.tenantSignedAt!).toLocaleDateString('ro-RO')}` : 'Semnătura:'}
 
 Data: ${contractDate}              Data: ${contractDate}
 `.trim()
@@ -242,10 +253,10 @@ export function generateLeaseContractHTML(data: ContractData): string {
   <div class="section">
     <h2>IV. PREȚUL ȘI MODALITATEA DE PLATĂ</h2>
     <p><strong>Art. 4 - Chiria Lunară</strong><br>
-    Chiria lunară este de <span class="highlight">${data.lease.monthlyRent} EUR</span>, plătibilă până în data de ${data.lease.paymentDay} a fiecărei luni.</p>
+    Chiria lunară este de <span class="highlight">${data.lease.monthlyRent} RON</span>, plătibilă până în data de ${data.lease.paymentDay} a fiecărei luni.</p>
 
     <p><strong>Art. 5 - Garanția</strong><br>
-    Garanția este de <span class="highlight">${data.lease.deposit || data.lease.monthlyRent} EUR</span> și va fi returnată la sfârșitul contractului, dacă nu există daune sau datorii.</p>
+    Garanția este de <span class="highlight">${data.lease.deposit || data.lease.monthlyRent} RON</span> și va fi returnată la sfârșitul contractului, dacă nu există daune sau datorii.</p>
 
     <p><strong>Art. 6 - Utilitățile</strong><br>
     Utilitățile (apă, gaz, energie electrică, internet) sunt în sarcina Chiriașului și se plătesc separat.</p>
@@ -289,12 +300,16 @@ export function generateLeaseContractHTML(data: ContractData): string {
   <div class="signature-section">
     <div class="signature-box">
       <strong>PROPRIETAR</strong><br><br>
-      Semnătura: _______________<br><br>
+      ${data.signatures.ownerSigned 
+        ? `<span style="color: green;">✓ Semnat la data ${new Date(data.signatures.ownerSignedAt!).toLocaleDateString('ro-RO')}</span>`
+        : 'Semnătura: _______________'}<br><br>
       Data: ${contractDate}
     </div>
     <div class="signature-box">
       <strong>CHIRIAȘ</strong><br><br>
-      Semnătura: _______________<br><br>
+      ${data.signatures.tenantSigned 
+        ? `<span style="color: green;">✓ Semnat la data ${new Date(data.signatures.tenantSignedAt!).toLocaleDateString('ro-RO')}</span>`
+        : 'Semnătura: _______________'}<br><br>
       Data: ${contractDate}
     </div>
   </div>

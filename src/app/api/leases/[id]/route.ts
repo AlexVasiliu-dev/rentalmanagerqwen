@@ -33,6 +33,9 @@ export async function GET(
             name: true,
             email: true,
             phone: true,
+            idCardSeries: true,
+            idCardNumber: true,
+            cnp: true,
           },
         },
         property: {
@@ -79,6 +82,9 @@ export async function GET(
         name: lease.renter.name,
         email: lease.renter.email,
         phone: lease.renter.phone,
+        idCardSeries: lease.renter.idCardSeries,
+        idCardNumber: lease.renter.idCardNumber,
+        cnp: lease.renter.cnp,
       },
       property: {
         address: lease.property.address,
@@ -95,6 +101,12 @@ export async function GET(
         monthlyRent: lease.monthlyRent,
         deposit: lease.deposit,
         paymentDay: 5, // Default payment day
+      },
+      signatures: {
+        ownerSigned: lease.ownerSigned,
+        ownerSignedAt: lease.ownerSignedAt?.toISOString() || null,
+        tenantSigned: lease.tenantSigned,
+        tenantSignedAt: lease.tenantSignedAt?.toISOString() || null,
       },
     }
 
@@ -120,13 +132,19 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { isActive, endDate, tenantSigned, signedAt } = body
+    const { isActive, endDate, tenantSigned, signedAt, tenantSignedAt } = body
 
     const updateData: Record<string, unknown> = {}
     if (isActive !== undefined) updateData.isActive = isActive
     if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null
-    if (tenantSigned !== undefined) updateData.tenantSigned = tenantSigned
+    if (tenantSigned !== undefined) {
+      updateData.tenantSigned = tenantSigned
+      if (tenantSigned && !tenantSignedAt) {
+        updateData.tenantSignedAt = new Date()
+      }
+    }
     if (signedAt !== undefined) updateData.signedAt = signedAt ? new Date(signedAt) : null
+    if (tenantSignedAt !== undefined) updateData.tenantSignedAt = tenantSignedAt ? new Date(tenantSignedAt) : null
 
     const lease = await prisma.lease.update({
       where: { id: params.id },

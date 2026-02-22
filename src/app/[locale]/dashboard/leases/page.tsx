@@ -174,7 +174,7 @@ export default function LeasesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tenantSigned: true,
-          signedAt: new Date().toISOString(),
+          tenantSignedAt: new Date().toISOString(),
         }),
       })
 

@@ -9,9 +9,14 @@ const createUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   name: z.string().min(2).optional(),
+  phone: z.string().optional(),
   role: z.enum(["ADMIN", "MANAGER", "RENTER"]),
   approved: z.boolean().optional(),
   active: z.boolean().optional(),
+  // Tenant-specific fields
+  idCardSeries: z.string().optional(),
+  idCardNumber: z.string().optional(),
+  cnp: z.string().optional(),
   // Lease-specific fields (for tenants)
   propertyId: z.string().optional(),
   startDate: z.string().optional(),
@@ -106,6 +111,10 @@ export async function POST(request: NextRequest) {
           role: validatedData.role,
           approved: validatedData.approved ?? true,
           active: validatedData.active ?? true,
+          phone: validatedData.phone,
+          idCardSeries: validatedData.idCardSeries,
+          idCardNumber: validatedData.idCardNumber,
+          cnp: validatedData.cnp,
         },
         select: {
           id: true,
@@ -115,6 +124,10 @@ export async function POST(request: NextRequest) {
           approved: true,
           active: true,
           createdAt: true,
+          phone: true,
+          idCardSeries: true,
+          idCardNumber: true,
+          cnp: true,
         },
       })
 
@@ -145,7 +158,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Create lease
-        await tx.lease.create({
+        const createdLease = await tx.lease.create({
           data: {
             propertyId: validatedData.propertyId,
             renterId: user.id,
@@ -160,7 +173,7 @@ export async function POST(request: NextRequest) {
           },
         })
 
-        leaseId = lease.id
+        leaseId = createdLease.id
 
         // Mark property as unavailable
         await tx.property.update({
@@ -187,7 +200,7 @@ export async function POST(request: NextRequest) {
       message: "Chiriaș creat cu succes",
       user: result.user,
       leaseId: result.leaseId,
-    }, { status: 201 })
+    })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -203,7 +216,7 @@ export async function POST(request: NextRequest) {
     }
     console.error("Error creating user:", error)
     return NextResponse.json(
-      { error: "Failed to create user" },
+      { error: "Eroare la crearea chiriașului" },
       { status: 500 }
     )
   }
