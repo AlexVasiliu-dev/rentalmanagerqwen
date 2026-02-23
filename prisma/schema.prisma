@@ -1,0 +1,250 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String         @id @default(cuid())
+  email             String         @unique
+  name              String?
+  password          String
+  role              Role           @default(RENTER)
+  approved          Boolean        @default(false)
+  active            Boolean        @default(true)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  ownerSlug         String?        @unique
+  phone             String?
+  // Tenant-specific fields
+  idCardSeries      String?        // Buletin serie
+  idCardNumber      String?        // Buletin număr
+  cnp               String?        // Cod Numeric Personal
+  // Owner-specific fields
+  companyFiscalCode String?
+  companyName       String?
+  companyRegNumber  String?
+  workingEmail      String?
+  // Subscription info
+  subscriptionType  String?        @default("free")  // free, monthly, yearly
+  subscriptionStatus String?       @default("free")  // free, active, cancelled, expired
+  subscriptionStart DateTime?
+  subscriptionEnd   DateTime?
+  paidProperties    Int            @default(0)
+  coveredProperties Int            @default(1)
+  bills             Bill[]
+  rentedProperties  Lease[]        @relation("Renter")
+  meterReadings     MeterReading[]
+  managedProperties Property[]     @relation("Manager")
+
+  @@index([email])
+  @@index([role])
+  @@index([ownerSlug])
+}
+
+model Property {
+  id                String          @id @default(cuid())
+  address           String
+  city              String
+  country           String          @default("Romania")
+  postalCode        String?
+  type              String
+  sqm               Float
+  rooms             Int?
+  floor             Int?
+  description       String?
+  monthlyRent       Float
+  deposit           Float?
+  utilitiesIncluded Boolean         @default(false)
+  available         Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  managerId         String?
+  leases            Lease[]
+  meters            Meter[]
+  manager           User?           @relation("Manager", fields: [managerId], references: [id])
+  images            PropertyImage[]
+
+  @@index([available])
+  @@index([managerId])
+}
+
+model PropertyImage {
+  id         String   @id @default(cuid())
+  propertyId String
+  url        String
+  caption    String?
+  isPrimary  Boolean  @default(false)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+}
+
+model Lease {
+  id              String         @id @default(cuid())
+  propertyId      String
+  renterId        String
+  startDate       DateTime
+  endDate         DateTime?
+  isActive        Boolean        @default(true)
+  monthlyRent     Float
+  deposit         Float?
+  depositReturned Boolean        @default(false)
+  approvedBy      String?
+  approvedAt      DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  ownerSigned     Boolean        @default(false)
+  ownerSignedAt   DateTime?
+  tenantSigned    Boolean        @default(false)
+  tenantSignedAt  DateTime?
+  signedAt        DateTime?
+  bills           Bill[]
+  property        Property       @relation(fields: [propertyId], references: [id])
+  renter          User           @relation("Renter", fields: [renterId], references: [id])
+  meterReadings   MeterReading[]
+
+  @@unique([propertyId, renterId, startDate])
+  @@index([renterId])
+  @@index([propertyId])
+  @@index([isActive])
+}
+
+model Meter {
+  id           String         @id @default(cuid())
+  propertyId   String
+  type         MeterType
+  serialNumber String?
+  location     String?
+  pricePerUnit Float          @default(0)
+  currency     String         @default("RON")
+  active       Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  property     Property       @relation(fields: [propertyId], references: [id])
+  readings     MeterReading[]
+
+  @@unique([propertyId, type])
+  @@index([propertyId])
+  @@index([type])
+}
+
+model MeterReading {
+  id              String      @id @default(cuid())
+  meterId         String
+  leaseId         String?
+  submittedBy     String?
+  readingType     ReadingType
+  value           Float
+  consumption     Float?
+  photoUrl        String?
+  isOCRProcessed  Boolean     @default(false)
+  ocrConfidence   Float?
+  readingDate     DateTime    @default(now())
+  periodStart     DateTime?
+  periodEnd       DateTime?
+  notes           String?
+  verified        Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  lease           Lease?      @relation(fields: [leaseId], references: [id])
+  meter           Meter       @relation(fields: [meterId], references: [id])
+  submittedByUser User?       @relation(fields: [submittedBy], references: [id])
+
+  @@index([meterId])
+  @@index([leaseId])
+  @@index([readingDate])
+}
+
+model Bill {
+  id                     String    @id @default(cuid())
+  leaseId                String?
+  userId                 String?
+  type                   String
+  description            String?
+  amount                 Float
+  currency               String    @default("RON")
+  paid                   Boolean   @default(false)
+  paidAt                 DateTime?
+  periodStart            DateTime
+  periodEnd              DateTime
+  meterReadingsBreakdown Json?
+  dueDate                DateTime
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  lease                  Lease?    @relation(fields: [leaseId], references: [id])
+  user                   User?     @relation(fields: [userId], references: [id])
+
+  @@index([leaseId])
+  @@index([userId])
+  @@index([paid])
+  @@index([dueDate])
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  propertyId  String?
+  category    String
+  description String
+  amount      Float
+  currency    String   @default("RON")
+  date        DateTime
+  receiptUrl  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([propertyId])
+  @@index([category])
+  @@index([date])
+}
+
+model UtilityPrice {
+  id            String    @id @default(cuid())
+  meterType     MeterType @unique
+  pricePerUnit  Float
+  currency      String    @default("RON")
+  effectiveFrom DateTime  @default(now())
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([meterType])
+  @@index([active])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  details   Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity])
+  @@index([createdAt])
+}
+
+enum Role {
+  SUPERADMIN  // System administrator - full access to everything
+  ADMIN       // Property owner - full access to their business
+  MANAGER     // Property manager - needs approval
+  RENTER      // Tenant - needs approval
+}
+
+enum ReadingType {
+  INITIAL
+  MONTHLY
+  FINAL
+}
+
+enum MeterType {
+  ELECTRICITY
+  WATER
+  GAS
+}

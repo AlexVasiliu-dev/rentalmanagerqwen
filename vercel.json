@@ -1,0 +1,13 @@
+{
+  "buildCommand": "cd rental-property-manager && npm run build",
+  "outputDirectory": "rental-property-manager/.next",
+  "devCommand": "cd rental-property-manager && npm run dev",
+  "installCommand": "cd rental-property-manager && npm install",
+  "framework": "nextjs",
+  "regions": ["fra1"],
+  "env": {
+    "DATABASE_URL": "@database-url",
+    "NEXTAUTH_SECRET": "@nextauth-secret",
+    "NEXTAUTH_URL": "@nextauth-url"
+  }
+}
